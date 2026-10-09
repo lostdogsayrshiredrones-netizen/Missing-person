@@ -1,0 +1,455 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Poster Maker">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icon-512.png">
+<title>Missing Person Poster Maker</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400;600;700&display=swap">
+<style>
+/* Layout: live poster on one side, the details form on the other; stacks to one column on a phone. */
+:root {
+  --bg: #f4f3fa; --surface: #ffffff; --fg: #1c1830; --muted: #625d78; --line: #d8d4e8;
+  --accent: #4f2bbd; --accent-fg: #ffffff; --warn: #b3261e;
+  --display: "Anton", Impact, "Arial Narrow", sans-serif;
+  --body: "Archivo", "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #15121f; --surface: #1f1b2d; --fg: #eeecf6; --muted: #a5a1ba; --line: #393351;
+  --accent: #9a82f5; --accent-fg: #130f22; --warn: #ff8a80; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #15121f; --surface: #1f1b2d; --fg: #eeecf6; --muted: #a5a1ba; --line: #393351;
+  --accent: #9a82f5; --accent-fg: #130f22; --warn: #ff8a80; color-scheme: dark }
+
+* { box-sizing: border-box }
+body { background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 16px; line-height: 1.45; padding-inline: 16px; padding-block: 20px 48px }
+.wrap { max-width: 1180px; margin: 0 auto; display: grid; gap: 24px }
+header h1 { font-family: var(--display); font-weight: 400; font-size: 1.9rem; letter-spacing: .02em; margin: 0; text-wrap: balance }
+header p { margin: 4px 0 0; color: var(--muted); max-width: 60ch }
+.cols { display: grid; gap: 24px; grid-template-columns: minmax(0, 1fr) }
+@media (min-width: 900px) {
+  .cols { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start }
+  .preview { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 16px) }
+}
+.preview { display: grid; gap: 12px; min-width: 0 }
+canvas { width: 100%; height: auto; aspect-ratio: 1; display: block; border: 1px solid var(--line); background: var(--surface) }
+.form { display: grid; gap: 22px; min-width: 0 }
+fieldset { border: 0; border-top: 2px solid var(--fg); margin: 0; padding: 12px 0 0; display: grid; gap: 12px; min-width: 0 }
+legend { font-family: var(--display); font-size: 1.1rem; letter-spacing: .04em; text-transform: uppercase; padding: 0 10px 0 0 }
+label { display: grid; gap: 4px; font-weight: 600; font-size: .9rem; min-width: 0 }
+label small, .hint { font-weight: 400; color: var(--muted); font-size: .82rem }
+input[type=text], textarea, select { font: inherit; font-weight: 400; color: var(--fg); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; width: 100%; min-width: 0 }
+textarea { resize: vertical; line-height: 1.4 }
+input[type=range] { width: 100%; accent-color: var(--accent) }
+:is(input, textarea, select, button):focus-visible { outline: 3px solid var(--accent); outline-offset: 2px }
+.row { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)) }
+.btn { font: inherit; font-weight: 700; border-radius: 6px; padding: 12px 16px; cursor: pointer; border: 1px solid var(--accent); background: transparent; color: var(--accent); text-align: center }
+.btn.primary { background: var(--accent); color: var(--accent-fg) }
+.btn.small { padding: 8px 12px; font-size: .88rem }
+.btn.file { display: inline-block }
+.btn.file input { position: absolute; width: 1px; height: 1px; opacity: 0 }
+.btn.file:focus-within { outline: 3px solid var(--accent); outline-offset: 2px }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center }
+.actions .primary { flex: 1 1 200px }
+.msg { margin: 0; font-size: .9rem; color: var(--muted) }
+.msg.warn { color: var(--warn); font-weight: 600 }
+.saved { display: grid; gap: 8px; border: 1px solid var(--line); background: var(--surface); padding: 12px; border-radius: 6px }
+.saved img { width: 100%; display: block }
+body { margin: 0 }
+img { max-width: 100% }
+[hidden] { display: none !important }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <h1>Missing Person Poster Maker</h1>
+    <p>Add the photo, fill in the details, and save a square image ready to post on Facebook. Text shrinks automatically to fit.</p>
+  </header>
+
+  <div class="cols">
+    <section class="preview" aria-label="Poster preview">
+      <canvas id="poster" width="2160" height="2160" role="img" aria-label="Live preview of the poster"></canvas>
+      <div class="actions">
+        <button class="btn primary" id="save" type="button">Save poster image</button>
+        <button class="btn" id="reset" type="button">Start a new poster</button>
+      </div>
+      <p class="msg" id="msg" role="status"></p>
+      <div class="saved" id="savedBox" hidden>
+        <p class="msg"><strong>Press and hold the picture below</strong>, then choose Save to Photos (or right-click and Save image on a computer).</p>
+        <img id="savedImg" alt="Finished poster">
+      </div>
+    </section>
+
+    <form class="form" id="form" autocomplete="off">
+      <fieldset>
+        <legend>Photo</legend>
+        <div class="actions">
+          <label class="btn file">Choose photo<input type="file" id="photo" accept="image/*"></label>
+          <span class="hint" id="photoName">No photo added yet</span>
+        </div>
+        <label>Zoom <input type="range" id="zoom" min="1" max="3" step="0.01" value="1"></label>
+        <div class="row">
+          <label>Move left / right <input type="range" id="posx" min="0" max="1" step="0.005" value="0.5"></label>
+          <label>Move up / down <input type="range" id="posy" min="0" max="1" step="0.005" value="0.5"></label>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Who is missing</legend>
+        <div class="row">
+          <label>First name <input type="text" id="first" placeholder="e.g. Marjorie"></label>
+          <label>Surname <input type="text" id="last" placeholder="e.g. Smith"></label>
+        </div>
+        <label>Refer to them as
+          <select id="pronoun">
+            <option value="she">she</option>
+            <option value="he">he</option>
+            <option value="they">they</option>
+          </select>
+        </label>
+      </fieldset>
+
+      <fieldset>
+        <legend>Last seen</legend>
+        <label>Day and time <input type="text" id="when" placeholder="e.g. Wednesday 24 June, 10:15am"></label>
+        <label>Where <small>One line each for street and town</small>
+          <textarea id="where" rows="2" placeholder="Street&#10;Town"></textarea></label>
+      </fieldset>
+
+      <fieldset>
+        <legend>Key information</legend>
+        <label>Description <small>One point per line</small>
+          <textarea id="desc" rows="4" placeholder="84 years old&#10;5ft 4inch&#10;Short grey hair&#10;Medium build"></textarea></label>
+        <label>Last seen wearing <small>One point per line</small>
+          <textarea id="wearing" rows="2">Not known</textarea></label>
+        <label>Other information <small>Leave a blank line between paragraphs</small>
+          <textarea id="other" rows="5" placeholder="Walking aids, vehicles, places they may go, sightings…"></textarea></label>
+      </fieldset>
+
+      <fieldset>
+        <legend>Appeal details</legend>
+        <label>Blue banner line <input type="text" id="banner" value="Police Scotland Missing Person Appeal"></label>
+        <label>Who to call <input type="text" id="call" value="CALL POLICE SCOTLAND ON 101"></label>
+        <div class="row">
+          <label>Police reference <input type="text" id="ref" placeholder="e.g. 0862 of 25 June 2026"></label>
+          <label>Appeal issued <input type="text" id="issued"></label>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Your logo</legend>
+        <div class="actions">
+          <label class="btn file small">Choose logo<input type="file" id="logo" accept="image/*"></label>
+          <button class="btn small" id="logoClear" type="button" hidden>Remove logo</button>
+          <span class="hint" id="logoName">Shown in the circle bottom right. Remembered on this device.</span>
+        </div>
+      </fieldset>
+
+      <button class="btn primary" id="save2" type="button">Save poster image</button>
+    </form>
+  </div>
+</div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const cv = $('poster'), ctx = cv.getContext('2d');
+  const K = cv.width / 2000;               // design space is 2000 x 2000
+  const YEL = '#fbfb62', VIO = '#5a33cb', BLUE = '#2a62f4', RED = '#d6391f';
+  const SANS = '"Archivo", "Helvetica Neue", Helvetica, Arial, sans-serif';
+  const DISP = '"Anton", Impact, "Arial Narrow Bold", sans-serif';
+  const TEXT_IDS = ['first','last','pronoun','when','where','desc','wearing','other','banner','call','ref','issued'];
+  const KEY = 'mp-poster-draft', LOGO_KEY = 'mp-poster-logo';
+  let photoImg = null, logoImg = null;
+
+  const store = {
+    get(k) { try { return localStorage.getItem(k) } catch (e) { return null } },
+    set(k, v) { try { localStorage.setItem(k, v) } catch (e) {} },
+    del(k) { try { localStorage.removeItem(k) } catch (e) {} }
+  };
+
+  const today = () => { const d = new Date(); return d.getDate() + '/' + (d.getMonth() + 1) + '/' + String(d.getFullYear()).slice(2) };
+  const val = id => $(id).value.trim();
+  const lines = id => $(id).value.split('\n').map(s => s.trim()).filter(Boolean);
+
+  // ---------- text helpers ----------
+  const font = (px, fam, w) => { ctx.font = (w || 700) + ' ' + px + 'px ' + (fam || SANS) };
+  function fitFont(text, px, maxW, fam, w) {
+    font(px, fam, w);
+    const m = ctx.measureText(text).width;
+    if (m > maxW) { px = px * maxW / m; font(px, fam, w) }
+    return px;
+  }
+  function wrap(text, maxW) {
+    const out = []; let cur = '';
+    for (const word of text.split(/\s+/)) {
+      const t = cur ? cur + ' ' + word : word;
+      if (cur && ctx.measureText(t).width > maxW) { out.push(cur); cur = word } else cur = t;
+    }
+    if (cur) out.push(cur);
+    return out;
+  }
+  function cover(img, x, y, w, h, zoom, px, py) {
+    const iw = img.naturalWidth || img.width, ih = img.naturalHeight || img.height;
+    const s = Math.max(w / iw, h / ih) * zoom, dw = iw * s, dh = ih * s;
+    ctx.drawImage(img, x + (w - dw) * px, y + (h - dh) * py, dw, dh);
+  }
+
+  // ---------- right-hand column (auto-shrinks to fit) ----------
+  function rightColumn(s, paint) {
+    const X = 1037, R = 1975;
+    let y = 530;
+    // Last seen box
+    font(42 * s);
+    const ls = [];
+    if (val('when')) ls.push(...wrap(val('when'), R - 1337));
+    lines('where').forEach(l => ls.push(...wrap(l, R - 1337)));
+    const boxH = Math.max(245 * Math.min(1, s + 0.15), 24 * s + 62 * s + ls.length * 52 * s + 26 * s);
+    if (paint) {
+      ctx.fillStyle = VIO; ctx.fillRect(X, y, 2000 - X, boxH);
+      const cx = 1170, cy = y + boxH / 2, r = Math.min(115, boxH / 2 - 10);
+      ctx.fillStyle = YEL; ctx.beginPath(); ctx.arc(cx, cy, r, 0, 7); ctx.fill();
+      ctx.strokeStyle = VIO; ctx.lineCap = 'round'; ctx.lineWidth = r * 0.035;
+      for (let i = 0; i < 12; i++) {
+        const a = i * Math.PI / 6;
+        ctx.beginPath(); ctx.moveTo(cx + Math.cos(a) * r * 0.74, cy + Math.sin(a) * r * 0.74);
+        ctx.lineTo(cx + Math.cos(a) * r * 0.87, cy + Math.sin(a) * r * 0.87); ctx.stroke();
+      }
+      ctx.lineWidth = r * 0.06;
+      ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx - r * 0.38, cy - r * 0.22); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + r * 0.52, cy - r * 0.46); ctx.stroke();
+      ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+      ctx.fillStyle = '#000'; font(56 * s, DISP, 400); ctx.fillText('LAST SEEN', 1337, y + 24 * s + 50 * s);
+      ctx.fillStyle = '#fff'; font(42 * s);
+      ls.forEach((l, i) => ctx.fillText(l, 1337, y + 24 * s + 62 * s + (i + 0.8) * 52 * s));
+    }
+    y += boxH + 12 * s;
+
+    const heading = t => {
+      if (paint) { ctx.fillStyle = '#000'; font(56 * s, DISP, 400); ctx.textAlign = 'left'; ctx.fillText(t, X, y + 52 * s) }
+      y += 74 * s;
+    };
+    const bullets = items => {
+      const lh = 55 * s; font(44 * s); ctx.fillStyle = VIO;
+      const two = items.length > 3 && items.every(t => ctx.measureText(t).width <= 410);
+      if (two) {
+        const rows = Math.max(3, Math.ceil(items.length / 2));
+        if (paint) items.forEach((t, i) => {
+          const c = Math.floor(i / rows), r = i % rows, bx = c ? 1500 : X + 4;
+          ctx.fillText('•', bx, y + (r + 0.78) * lh); ctx.fillText(t, bx + 34, y + (r + 0.78) * lh);
+        });
+        y += Math.min(rows, items.length) * lh;
+      } else {
+        for (const t of items) {
+          const ws = wrap(t, R - (X + 38));
+          if (paint) { ctx.fillText('•', X + 4, y + 0.78 * lh); ws.forEach((l, i) => ctx.fillText(l, X + 38, y + (i + 0.78) * lh)) }
+          y += ws.length * lh;
+        }
+      }
+      y += 20 * s;
+    };
+
+    const desc = lines('desc'), wear = lines('wearing');
+    if (desc.length) { heading('DESCRIPTION'); bullets(desc) }
+    if (wear.length) { heading('LAST SEEN WEARING'); bullets(wear) }
+    const paras = $('other').value.split(/\n\s*\n/).map(p => p.replace(/\s+/g, ' ').trim()).filter(Boolean);
+    if (paras.length) {
+      heading('OTHER INFORMATION');
+      y -= 10 * s; font(40 * s); ctx.fillStyle = VIO;
+      for (const p of paras) {
+        const ws = wrap(p, R - X + 5);
+        if (paint) ws.forEach((l, i) => ctx.fillText(l, X - 5, y + (i + 0.8) * 51 * s));
+        y += ws.length * 51 * s + 24 * s;
+      }
+    }
+    return y;
+  }
+
+  // ---------- whole poster ----------
+  function draw() {
+    ctx.setTransform(K, 0, 0, K, 0, 0);
+    ctx.textBaseline = 'alphabetic'; ctx.shadowColor = 'transparent';
+    ctx.fillStyle = YEL; ctx.fillRect(0, 0, 2000, 2000);
+
+    // Header
+    ctx.textAlign = 'center'; ctx.fillStyle = RED;
+    fitFont('MISSING PERSON', 190, 1520); ctx.fillText('MISSING PERSON', 1000, 182);
+    ctx.font = '150px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
+    ctx.fillText('\u{1F6A8}', 105, 175); ctx.fillText('\u{1F6A8}', 1895, 175);
+
+    // Name band
+    const first = val('first'), full = (first + ' ' + val('last')).trim();
+    ctx.fillStyle = VIO; ctx.fillRect(0, 232, 2000, 146);
+    const nameLine = 'PLEASE HELP FIND ' + (full || 'NAME').toUpperCase();
+    fitFont(nameLine, 98, 1880);
+    ctx.shadowColor = 'rgba(0,0,0,.55)'; ctx.shadowBlur = 10 * K; ctx.shadowOffsetX = 4 * K; ctx.shadowOffsetY = 5 * K;
+    ctx.fillStyle = YEL; ctx.textBaseline = 'middle'; ctx.fillText(nameLine, 1000, 310);
+    ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
+
+    // Banner band
+    ctx.fillStyle = BLUE; ctx.fillRect(0, 378, 2000, 150);
+    if (val('banner')) { ctx.fillStyle = '#fff'; fitFont(val('banner'), 78, 1880); ctx.fillText(val('banner'), 1000, 456) }
+    ctx.textBaseline = 'alphabetic';
+
+    // Photo
+    const P = { x: 25, y: 573, w: 985, h: 932 };
+    ctx.save(); ctx.beginPath(); ctx.rect(P.x, P.y, P.w, P.h); ctx.clip();
+    if (photoImg) cover(photoImg, P.x, P.y, P.w, P.h, +$('zoom').value, +$('posx').value, +$('posy').value);
+    else {
+      ctx.fillStyle = '#cfcbe2'; ctx.fillRect(P.x, P.y, P.w, P.h);
+      ctx.fillStyle = '#5b5674'; ctx.textAlign = 'center'; font(64); ctx.fillText('Photo goes here', P.x + P.w / 2, P.y + P.h / 2 + 20);
+    }
+    ctx.restore();
+
+    // Right column: shrink until it fits above the footer
+    let s = 1; while (s > 0.5 && rightColumn(s, false) > 1540) s -= 0.03;
+    rightColumn(s, true);
+
+    // Footer
+    ctx.fillStyle = VIO; ctx.fillRect(0, 1550, 2000, 450);
+    // handset
+    const PS = 17.2;
+    ctx.save(); ctx.translate(28 - 3 * PS, 1612 - 3 * PS); ctx.scale(PS, PS); ctx.fillStyle = YEL;
+    ctx.fill(new Path2D('M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z'));
+    ctx.restore();
+
+    // text sits between the handset and the logo, never over either
+    const hasLogo = !!logoImg, tL = 375, tR = hasLogo ? 1735 : 1960, cxT = (tL + tR) / 2, maxT = tR - tL;
+    ctx.textAlign = 'center'; ctx.fillStyle = YEL;
+    const who = first || 'this person', pro = $('pronoun').value;
+    const l1 = 'If you have seen ' + who + ' or know where ' + pro + ' may be';
+    fitFont(l1, 58, maxT); ctx.fillText(l1, cxT, 1640);
+    if (val('call')) { fitFont(val('call'), 68, maxT, SANS, 600); ctx.fillText(val('call'), cxT, 1742) }
+    if (val('ref')) { const r = 'REFERENCE: ' + val('ref'); fitFont(r, 80, maxT); ctx.fillText(r, cxT, 1852) }
+    ctx.fillStyle = '#fff';
+    const tag = 'TOGETHER WE CAN HELP BRING ' + (first || 'THEM').toUpperCase() + ' HOME';
+    fitFont(tag, 46, maxT, DISP, 400); ctx.fillText(tag, cxT, 1962);
+
+    if (hasLogo) {
+      ctx.save(); ctx.beginPath(); ctx.arc(1865, 1706, 116, 0, 7); ctx.clip();
+      cover(logoImg, 1749, 1590, 232, 232, 1, 0.5, 0.5); ctx.restore();
+    }
+    if (val('issued')) {
+      ctx.fillStyle = '#fff'; font(27);
+      ctx.fillText('Appeal issued', 1865, 1893); ctx.fillText(val('issued'), 1865, 1924);
+    }
+  }
+
+  let queued = false;
+  const redraw = () => { if (!queued) { queued = true; requestAnimationFrame(() => { queued = false; draw() }) } };
+
+  // ---------- state ----------
+  function saveDraft() {
+    const o = {}; TEXT_IDS.forEach(id => o[id] = $(id).value); store.set(KEY, JSON.stringify(o));
+  }
+  function loadDraft() {
+    try { const o = JSON.parse(store.get(KEY) || '{}'); TEXT_IDS.forEach(id => { if (typeof o[id] === 'string') $(id).value = o[id] }) } catch (e) {}
+    if (!$('issued').value) $('issued').value = today();
+  }
+  function loadImage(src) {
+    return new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src });
+  }
+  function setLogo(img, persist) {
+    logoImg = img; $('logoClear').hidden = !img;
+    if (img && persist) {
+      const c = document.createElement('canvas'); c.width = c.height = 480;
+      const g = c.getContext('2d'), iw = img.naturalWidth, ih = img.naturalHeight, sc = Math.max(480 / iw, 480 / ih);
+      g.drawImage(img, (480 - iw * sc) / 2, (480 - ih * sc) / 2, iw * sc, ih * sc);
+      store.set(LOGO_KEY, c.toDataURL('image/png'));
+    }
+    redraw();
+  }
+
+  $('form').addEventListener('input', e => { if (e.target.type !== 'file') { saveDraft(); redraw() } });
+  $('form').addEventListener('submit', e => e.preventDefault());
+
+  $('photo').addEventListener('change', async e => {
+    const f = e.target.files[0]; if (!f) return;
+    try {
+      photoImg = await loadImage(URL.createObjectURL(f));
+      $('zoom').value = 1; $('posx').value = 0.5; $('posy').value = 0.5;
+      $('photoName').textContent = 'Photo added. Use the sliders to frame the face.';
+    } catch (err) { $('photoName').textContent = 'That file could not be opened as a picture. Try a JPEG or PNG.' }
+    redraw();
+  });
+  $('logo').addEventListener('change', async e => {
+    const f = e.target.files[0]; if (!f) return;
+    try { setLogo(await loadImage(URL.createObjectURL(f)), true) } catch (err) { $('logoName').textContent = 'That file could not be opened as a picture.' }
+  });
+  $('logoClear').addEventListener('click', () => { store.del(LOGO_KEY); $('logo').value = ''; setLogo(null) });
+
+  // Reset needs a second tap
+  let armed = null;
+  $('reset').addEventListener('click', () => {
+    if (!armed) {
+      $('reset').textContent = 'Tap again to clear everything';
+      armed = setTimeout(() => { armed = null; $('reset').textContent = 'Start a new poster' }, 4000);
+      return;
+    }
+    clearTimeout(armed); armed = null; $('reset').textContent = 'Start a new poster';
+    ['first','last','when','where','desc','other','ref'].forEach(id => $(id).value = '');
+    $('wearing').value = 'Not known'; $('pronoun').value = 'she'; $('issued').value = today();
+    photoImg = null; $('photo').value = ''; $('photoName').textContent = 'No photo added yet';
+    $('savedBox').hidden = true; setMsg('');
+    saveDraft(); redraw();
+  });
+
+  // ---------- save ----------
+  const setMsg = (t, warn) => { $('msg').textContent = t; $('msg').className = 'msg' + (warn ? ' warn' : '') };
+  let lastUrl = null;
+  async function save() {
+    const missing = [];
+    if (!photoImg) missing.push('a photo');
+    if (!val('first')) missing.push('a first name');
+    if (missing.length) { setMsg('Add ' + missing.join(' and ') + ' before saving.', true); return }
+    draw();
+    const blob = await new Promise(r => cv.toBlob(r, 'image/jpeg', 0.93));
+    if (!blob) { setMsg('The image could not be created. Try a smaller photo.', true); return }
+    if (lastUrl) URL.revokeObjectURL(lastUrl);
+    lastUrl = URL.createObjectURL(blob);
+    $('savedImg').src = lastUrl;
+    const name = 'missing-' + (val('first') + '-' + val('last')).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '.jpg';
+    let dl = null;
+    try { dl = await window.claude?.use?.('downloads') } catch (e) {}
+    if (dl) {
+      try { await dl.save({ filename: name, data: blob }); $('savedBox').hidden = true; setMsg('Poster saved as ' + name + '.'); return }
+      catch (err) {
+        if (err && err.code === 'declined') { setMsg('Save cancelled. The finished poster is below if you still want it.') }
+        else setMsg('');
+      }
+    } else {
+      setMsg('');
+      const file = new File([blob], name, { type: 'image/jpeg' });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        // phones: opens the share sheet, which offers Save Image
+        try { await navigator.share({ files: [file] }); setMsg('Poster ready. Choose Save Image to keep it in your photos.') } catch (e) {}
+      } else {
+        const a = document.createElement('a'); a.href = lastUrl; a.download = name;
+        document.body.appendChild(a); a.click(); a.remove();
+        setMsg('Poster downloaded as ' + name + '.');
+      }
+    }
+    $('savedBox').hidden = false;
+    $('savedBox').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+  $('save').addEventListener('click', save);
+  $('save2').addEventListener('click', save);
+
+  // ---------- boot ----------
+  loadDraft();
+  draw();
+  const savedLogo = store.get(LOGO_KEY);
+  if (savedLogo) loadImage(savedLogo).then(i => setLogo(i, false)).catch(() => {});
+  if (document.fonts && document.fonts.load) {
+    Promise.all([document.fonts.load('700 40px Archivo'), document.fonts.load('600 40px Archivo'), document.fonts.load('400 40px Anton')]).then(redraw, redraw);
+  }
+})();
+</script>
+</body>
+</html>
