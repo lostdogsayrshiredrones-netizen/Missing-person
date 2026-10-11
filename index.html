@@ -394,7 +394,7 @@
 
   </nav>
 
-  <p class="version">Version 1.2 · 11 Oct 2026</p>
+  <p class="version">Version 1.3 · 11 Oct 2026</p>
 </main>
 
 <!-- ================= CREATE MISSING PERSON POSTER ================= -->
@@ -476,7 +476,7 @@
   <p class="form-msg" id="mp-msg" role="status"></p>
 
   <h3 class="section">Post text</h3>
-  <p class="hint">Wording to go with the poster on Facebook. Check it before you post.</p>
+  <p class="hint">Wording to go with the poster on Facebook. Anything in [square brackets] still needs filling in above.</p>
   <div class="post-text" id="mp-post"></div>
   <button class="btn wide" id="mp-copy" type="button">Copy post text</button>
   <p class="form-msg" id="mp-copy-msg" role="status"></p>
@@ -587,6 +587,7 @@ function collect() {
   return {
     first: v('first'), last: v('last'), age: v('age'), pronoun: $('mp-pronoun').value,
     when: whenText($('mp-date').value, $('mp-time').value),
+    dateRaw: $('mp-date').value, timeRaw: $('mp-time').value, street: v('street'), town: v('town'),
     where: [v('street'), v('town')].filter(Boolean),
     desc: linesOf($('mp-desc').value), wearing: linesOf($('mp-wearing').value),
     other: $('mp-other').value.split(/\n\s*\n/).map(p => p.replace(/\s+/g, ' ').trim()).filter(Boolean),
@@ -753,19 +754,40 @@ function paint(ctx, K, d, photo) {
 
 // ---------- Post text ----------
 function postText(d) {
-  const full = (d.first + ' ' + d.last).trim() || '[name]';
-  const first = d.first || 'them';
-  const out = ['\u{1F6A8} MISSING PERSON – PLEASE SHARE \u{1F6A8}', '', 'Please help find ' + full + (d.age ? ', aged ' + d.age : '') + '.'];
-  const seen = [d.when].concat(d.where).filter(Boolean).join(', ');
-  if (seen) out.push('', 'Last seen: ' + seen + '.');
-  if (d.desc.length) out.push('', 'Description: ' + d.desc.join(', ') + '.');
-  if (d.wearing.length) out.push('Last seen wearing: ' + d.wearing.join(', ') + '.');
-  d.other.forEach(p => out.push('', p));
-  out.push('', 'If you have seen ' + (d.first || 'this person') + ' or know where ' + d.pronoun + ' may be:');
-  if (d.call) out.push(d.call);
-  if (d.ref) out.push('Police reference: ' + d.ref);
-  out.push('', 'Together we can help bring ' + first + ' home.');
-  return out.join('\n');
+  const first = d.first || '[first name]';
+  const full = (d.first || d.last) ? (d.first + ' ' + d.last).trim() : '[first name] [last name]';
+  // "Saturday 10th October 2026" and "1405"
+  let day = '[day] [date]';
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d.dateRaw || '');
+  if (m) {
+    const dt = new Date(+m[1], +m[2] - 1, +m[3]), n = dt.getDate();
+    const th = (n % 10 === 1 && n !== 11) ? 'st' : (n % 10 === 2 && n !== 12) ? 'nd' : (n % 10 === 3 && n !== 13) ? 'rd' : 'th';
+    day = DAYS[dt.getDay()] + ' ' + n + th + ' ' + MONTHS[dt.getMonth()] + ' ' + dt.getFullYear();
+  }
+  const t = /^(\d{2}):(\d{2})$/.exec(d.timeRaw || '');
+  const time = t ? t[1] + t[2] : '[time]';
+  const tag = (d.first || '').replace(/[^A-Za-z0-9]/g, '');
+  return [
+    '\u{1F6A8}MISSING PERSON APPEAL\u{1F6A8}',
+    '',
+    'Police Scotland Ayrshire are appealing for information to help trace ' + full,
+    '',
+    first + ', ' + (d.age || '[age]') + ' years old, was last seen in the ' + (d.street || '[street name]') + ' area of ' + (d.town || '[town]') +
+      ' around ' + time + ' hours on ' + day + '.',
+    '',
+    'If you have seen ' + first + ', or have CCTV, doorbell or dash-cam footage that may assist, please contact Police Scotland on 101, quoting incident number ' +
+      (d.ref || '[incident number] of [date]') + '.',
+    '',
+    'Please look at the Police Scotland Ayrshire social media appeal for more information.',
+    '',
+    '\u{1F64F} Please share this post. One share could reach someone with vital information that helps bring ' + first + ' home. \u{1F499}',
+    '',
+    '#MissingPerson',
+    '#PoliceScotlandAyrshire',
+    '#Bring' + (tag || '[firstname]') + 'Home',
+    '',
+    '#DroneSearchAndRescueAyrshire working with #LostDogsAyrshire'
+  ].join('\n');
 }
 
 // ---------- Drawing ----------
