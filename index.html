@@ -394,7 +394,7 @@
 
   </nav>
 
-  <p class="version">Version 1.1 · 11 Oct 2026</p>
+  <p class="version">Version 1.2 · 11 Oct 2026</p>
 </main>
 
 <!-- ================= CREATE MISSING PERSON POSTER ================= -->
@@ -653,13 +653,13 @@ function paint(ctx, K, d, photo) {
   ctx.restore();
 
   // ----- Name in a yellow pill -----
-  const N = { x: M, y: 1257, w: 870, h: 303 };
+  const N = { x: M, y: 1257, w: 870, h: 250 };
   ctx.fillStyle = YEL; box(N.x, N.y, N.w, N.h, 34); ctx.fill();
   ctx.fillStyle = PURPLE; ctx.textAlign = 'center';
   const nameUp = (full || 'NAME').toUpperCase(), cxN = N.x + N.w / 2, maxN = N.w - 60;
   if (d.age) {
-    fitFont(nameUp, 104, maxN, 900); ctx.fillText(nameUp, cxN, N.y + 150);
-    font(60, 800); ctx.fillText('Age ' + d.age, cxN, N.y + 240);
+    fitFont(nameUp, 104, maxN, 900); ctx.fillText(nameUp, cxN, N.y + 128);
+    font(54, 800); ctx.fillText('Age ' + d.age, cxN, N.y + 205);
   } else {
     font(104, 900);
     if (ctx.measureText(nameUp).width > maxN && d.first && d.last) {
@@ -667,14 +667,14 @@ function paint(ctx, K, d, photo) {
       font(104, 900);
       const widest = Math.max(ctx.measureText(a).width, ctx.measureText(b).width);
       const px = Math.min(104, 104 * maxN / widest); font(px, 900);
-      ctx.fillText(a, cxN, N.y + 138); ctx.fillText(b, cxN, N.y + 138 + px * 1.05);
+      ctx.fillText(a, cxN, N.y + 112); ctx.fillText(b, cxN, N.y + 112 + px);
     } else {
       ctx.textBaseline = 'middle'; fitFont(nameUp, 116, maxN, 900); ctx.fillText(nameUp, cxN, N.y + N.h / 2 + 6); ctx.textBaseline = 'alphabetic';
     }
   }
 
   // ----- White details card (text shrinks until it fits) -----
-  const C = { x: 988, y: 354, w: R - 988, h: 1206, pad: 50 };
+  const C = { x: 988, y: 354, w: R - 988, h: 1153, pad: 50 };
   ctx.fillStyle = '#fff'; box(C.x, C.y, C.w, C.h, 52); ctx.fill();
   const innerW = C.w - C.pad * 2;
   const sections = [];
@@ -710,10 +710,10 @@ function paint(ctx, K, d, photo) {
   // ----- Footer -----
   ctx.textAlign = 'center'; ctx.fillStyle = '#fff';
   const l1 = 'If you have seen ' + (d.first || 'this person') + ' or know where ' + d.pronoun + ' may be';
-  fitFont(l1, 47, R - M, 700); ctx.fillText(l1, 1000, 1650);
+  fitFont(l1, 47, R - M, 700); ctx.fillText(l1, 1000, 1592);
 
   // Yellow call bar: handset, wording, and the number picked out large
-  const B = { x: M, y: 1676, w: R - M, h: 170 };
+  const B = { x: M, y: 1618, w: R - M, h: 170 };
   ctx.fillStyle = YEL; box(B.x, B.y, B.w, B.h, 40); ctx.fill();
   const m = /^(.*?)\s*(\d[\d ]*)$/.exec(d.call || '');
   const pre = m ? m[1] : (d.call || ''), num = m ? m[2] : '';
@@ -735,18 +735,19 @@ function paint(ctx, K, d, photo) {
   if (num) { font(146 * f, 900); ctx.fillText(num, x, cy + 8 * f); }
   ctx.textBaseline = 'alphabetic';
 
-  // Reference on the left, appeal line and date on the right
-  let refW = 0;
+  // Police reference in its own outlined box, then the appeal line and date
   if (d.ref) {
-    const r = 'Reference ' + d.ref;
-    ctx.fillStyle = YEL; ctx.textAlign = 'left'; fitFont(r, 52, 1100, 700); ctx.fillText(r, M, 1922);
-    refW = ctx.measureText(r).width + 50;
+    const G = { x: M, y: 1812, w: R - M, h: 96 };
+    ctx.strokeStyle = YEL; ctx.lineWidth = 7; box(G.x + 3.5, G.y + 3.5, G.w - 7, G.h - 7, 30); ctx.stroke();
+    const r = 'POLICE REFERENCE: ' + d.ref;
+    ctx.fillStyle = YEL; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    fitFont(r, 62, G.w - 80, 900); ctx.fillText(r, 1000, G.y + G.h / 2 + 3);
+    ctx.textBaseline = 'alphabetic';
   }
-  const small = [d.banner, d.issued ? 'issued ' + d.issued : ''].filter(Boolean).join(' · ');
+  const small = [d.banner, d.issued ? 'issued ' + d.issued : ''].filter(Boolean).join(' \u00b7 ');
   if (small) {
-    ctx.fillStyle = '#fff'; fitFont(small, 37, R - M - refW, 700);
-    if (refW) { ctx.textAlign = 'right'; ctx.fillText(small, R, 1922); }
-    else { ctx.textAlign = 'center'; ctx.fillText(small, 1000, 1922); }
+    ctx.fillStyle = '#fff'; ctx.textAlign = 'center';
+    fitFont(small, 34, R - M, 700); ctx.fillText(small, 1000, d.ref ? 1957 : 1880);
   }
 }
 
@@ -762,7 +763,7 @@ function postText(d) {
   d.other.forEach(p => out.push('', p));
   out.push('', 'If you have seen ' + (d.first || 'this person') + ' or know where ' + d.pronoun + ' may be:');
   if (d.call) out.push(d.call);
-  if (d.ref) out.push('Reference: ' + d.ref);
+  if (d.ref) out.push('Police reference: ' + d.ref);
   out.push('', 'Together we can help bring ' + first + ' home.');
   return out.join('\n');
 }
