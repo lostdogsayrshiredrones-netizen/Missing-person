@@ -225,6 +225,7 @@
     border-radius: 999px;
     cursor: pointer;
   }
+  .topbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
   .back:focus-visible { outline: 3px solid var(--white); outline-offset: 3px; }
 
   .page-title {
@@ -394,12 +395,15 @@
 
   </nav>
 
-  <p class="version">Version 1.3 · 11 Oct 2026</p>
+  <p class="version">Version 1.4 · 11 Oct 2026</p>
 </main>
 
 <!-- ================= CREATE MISSING PERSON POSTER ================= -->
 <section class="screen" id="create-poster">
-  <button class="back" data-go="home">&larr; Home</button>
+  <div class="topbar">
+    <button class="back" data-go="home">&larr; Home</button>
+    <button class="back" id="mp-reset-top" type="button">Start new</button>
+  </div>
   <h2 class="page-title">Create Missing Person Poster</h2>
   <p class="intro">Fill in the details and the poster is made for you.</p>
 
@@ -870,21 +874,25 @@ $('mp-copy').addEventListener('click', () => {
 });
 
 // Clearing needs a second tap, so it cannot happen by accident
-let armed = null;
-$('mp-reset').addEventListener('click', () => {
-  const btn = $('mp-reset');
-  if (!armed) {
-    btn.textContent = 'Tap again to clear everything';
-    armed = setTimeout(() => { armed = null; btn.textContent = 'Start a new poster'; }, 4000);
-    return;
-  }
-  clearTimeout(armed); armed = null; btn.textContent = 'Start a new poster';
+function clearPoster() {
   ['first','last','age','date','time','street','town','desc','other','ref'].forEach(id => { $('mp-' + id).value = ''; });
   $('mp-wearing').value = 'Not known'; $('mp-pronoun').value = 'she'; $('mp-issued').value = today();
   photoImg = null; $('mp-photo').value = ''; $('mp-photo-tools').hidden = true;
   $('mp-photo-btn').textContent = 'Choose a photo';
   msg(''); $('mp-copy-msg').textContent = '';
   saveDraft(); drawNow(); window.scrollTo(0, 0);
+}
+[['mp-reset-top', 'Start new', 'Tap again to clear'], ['mp-reset', 'Start a new poster', 'Tap again to clear everything']].forEach(([id, label, confirm]) => {
+  const btn = $(id); let armed = null;
+  btn.addEventListener('click', () => {
+    if (!armed) {
+      btn.textContent = confirm;
+      armed = setTimeout(() => { armed = null; btn.textContent = label; }, 4000);
+      return;
+    }
+    clearTimeout(armed); armed = null; btn.textContent = label;
+    clearPoster();
+  });
 });
 
 // ---------- Start ----------
