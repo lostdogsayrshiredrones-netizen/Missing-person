@@ -200,6 +200,23 @@
   .tile:active img { transform: translateY(4px); box-shadow: 0 2px 0 rgba(0, 0, 0, .3); }
   .tile:focus-visible { outline: 3px solid var(--white); outline-offset: 4px; border-radius: 16px; }
 
+  a.tile { text-decoration: none; }
+  /* Picture-less tiles */
+  .tile .art {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    aspect-ratio: 1 / 1;
+    background: var(--purple-deep);
+    color: var(--yellow);
+    border: 4px solid var(--yellow);
+    border-radius: 16px;
+    box-shadow: 0 6px 0 rgba(0, 0, 0, .3);
+    transition: transform .08s ease, box-shadow .08s ease;
+  }
+  .tile .art svg { width: 62%; height: auto; }
+  .tile:active .art { transform: translateY(4px); box-shadow: 0 2px 0 rgba(0, 0, 0, .3); }
+
   .tile-name {
     display: block;
     margin-top: 12px;
@@ -402,11 +419,24 @@
       <span class="tile-name">Missing Person Update Posters</span>
     </button>
 
+    <!-- TILE: The Drone Map (opens the website) -->
+    <a class="tile" href="https://thedronemap.com/" target="_blank" rel="noopener">
+      <span class="art">
+        <svg viewBox="0 0 100 100" aria-hidden="true">
+          <path d="M8 30l26-10 32 10 26-10v52L66 82 34 72 8 82z" fill="none" stroke="currentColor" stroke-width="5" stroke-linejoin="round"/>
+          <path d="M34 20v52M66 30v52" stroke="currentColor" stroke-width="5"/>
+          <path d="M50 12c-10 0-18 8-18 18 0 13 18 32 18 32s18-19 18-32c0-10-8-18-18-18z" fill="currentColor" stroke="#3e12a3" stroke-width="4"/>
+          <circle cx="50" cy="30" r="7" fill="#3e12a3"/>
+        </svg>
+      </span>
+      <span class="tile-name">The Drone Map</span>
+    </a>
+
     <!-- Add more tiles here: copy a button above, change data-go and the name -->
 
   </nav>
 
-  <p class="version">Version 1.5 · 11 Oct 2026</p>
+  <p class="version">Version 1.6 · 11 Oct 2026</p>
 </main>
 
 <!-- ================= CREATE MISSING PERSON POSTER ================= -->
