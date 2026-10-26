@@ -436,7 +436,7 @@
 
   </nav>
 
-  <p class="version">Version 1.6 · 11 Oct 2026</p>
+  <p class="version">Version 1.7 · 26 Oct 2026</p>
 </main>
 
 <!-- ================= CREATE MISSING PERSON POSTER ================= -->
@@ -507,10 +507,18 @@
     <p class="field-help">Leave a blank line between paragraphs. Leave empty to keep it off the poster.</p>
 
     <h3 class="section">Appeal details</h3>
-    <label for="mp-ref">Police reference</label>
-    <input id="mp-ref" type="text" placeholder="e.g. 0862 of 25 June 2026" maxlength="50">
+    <div class="pair">
+      <div><label for="mp-ref">Police reference number</label>
+        <input id="mp-ref" type="text" inputmode="numeric" placeholder="e.g. 3475" maxlength="12"></div>
+      <div><label for="mp-refdate">Reference date</label>
+        <input id="mp-refdate" type="date"></div>
+    </div>
     <label for="mp-issued">Appeal issued</label>
     <input id="mp-issued" type="text" maxlength="20">
+    <p class="field-help">Set to today each time you open the app.</p>
+    <label for="mp-fb">Police Scotland Facebook appeal link</label>
+    <input id="mp-fb" type="url" inputmode="url" autocapitalize="none" placeholder="Paste the link to the Police Scotland post">
+    <p class="field-help">Added to the post text so people can open the official appeal. Leave empty to leave it out.</p>
     <label for="mp-banner">Appeal line</label>
     <input id="mp-banner" type="text" value="Police Scotland appeal" maxlength="40">
     <label for="mp-call">Who to call</label>
@@ -625,7 +633,7 @@ function copyText(text) {
 // ============================================================
 const YEL = '#fdf90f', PURPLE = '#5220c4';
 const SANS = '"Montserrat", "Helvetica Neue", Helvetica, Arial, sans-serif';
-const FIELDS = ['first','last','age','pronoun','date','time','street','town','desc','wearing','other','ref','issued','banner','call'];
+const FIELDS = ['first','last','age','pronoun','date','time','street','town','desc','wearing','other','ref','refdate','fb','banner','call'];
 const DRAFT_KEY = 'dsra-mp-draft-2';
 const DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -652,6 +660,14 @@ function whenText(date, time) {
 }
 
 // Everything the poster needs, read from the form
+// "3475 of 25 October 2026" from the number and the date picker
+function refText(num, date) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date || '');
+  const day = m ? (+m[3]) + ' ' + MONTHS[+m[2] - 1] + ' ' + m[1] : '';
+  if (!num) return '';
+  return day ? num + ' of ' + day : num;
+}
+
 function collect() {
   const v = id => $('mp-' + id).value.trim();
   return {
@@ -661,7 +677,7 @@ function collect() {
     where: [v('street'), v('town')].filter(Boolean),
     desc: linesOf($('mp-desc').value), wearing: linesOf($('mp-wearing').value),
     other: $('mp-other').value.split(/\n\s*\n/).map(p => p.replace(/\s+/g, ' ').trim()).filter(Boolean),
-    ref: v('ref'), issued: v('issued'), banner: v('banner'), call: v('call'),
+    ref: refText(v('ref'), $('mp-refdate').value), fb: v('fb'), issued: v('issued'), banner: v('banner'), call: v('call'),
     zoom: $('mp-zoom').value / 100, px: $('mp-x').value / 100, py: $('mp-y').value / 100
   };
 }
@@ -848,7 +864,7 @@ function postText(d) {
     'If you have seen ' + first + ', or have CCTV, doorbell or dash-cam footage that may assist, please contact Police Scotland on 101, quoting incident number ' +
       (d.ref || '[incident number] of [date]') + '.',
     '',
-    'Please look at the Police Scotland Ayrshire social media appeal for more information.',
+    'Please look at the Police Scotland Ayrshire social media appeal for more information.' + (d.fb ? '\n' + d.fb : ''),
     '',
     '\u{1F64F} Please share this post. One share could reach someone with vital information that helps bring ' + first + ' home. \u{1F499}',
     '',
@@ -893,7 +909,7 @@ function loadDraft() {
     const o = JSON.parse(store.get(DRAFT_KEY) || '{}');
     FIELDS.forEach(id => { if (typeof o[id] === 'string') $('mp-' + id).value = o[id]; });
   } catch (e) {}
-  if (!$('mp-issued').value) $('mp-issued').value = today();
+  $('mp-issued').value = today();   // always the day the poster is made
 }
 
 $('mp-form').addEventListener('input', e => { if (e.target.type !== 'file') { saveDraft(); redraw(); } });
@@ -941,7 +957,7 @@ $('mp-copy').addEventListener('click', () => {
 
 // Clearing needs a second tap, so it cannot happen by accident
 function clearPoster() {
-  ['first','last','age','date','time','street','town','desc','other','ref'].forEach(id => { $('mp-' + id).value = ''; });
+  ['first','last','age','date','time','street','town','desc','other','ref','refdate','fb'].forEach(id => { $('mp-' + id).value = ''; });
   $('mp-wearing').value = 'Not known'; $('mp-pronoun').value = 'she'; $('mp-issued').value = today();
   photoImg = null; $('mp-photo').value = ''; $('mp-photo-tools').hidden = true;
   $('mp-photo-btn').textContent = 'Choose a photo';
